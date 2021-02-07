@@ -1,0 +1,66 @@
+---
+title: "Data Products Map Project"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## COVID Data
+
+To create out interactive COVID map, we first download current COVID infrection data from
+
+[Data Link](https://coronavirus-resources.esri.com/datasets/)
+
+According to the website, their data is updated daily, and as can be seen from the dates in the resulting .csv file, most of the data is for 6 Feb 2021, which is the current date as this is written.  
+
+## Load Data and Packages
+
+- Load tidyverse for ease of manipulating data
+- Load leaflet to create the interactive map
+- Load the downloaded .csv file as a tibble
+
+```{r}
+suppressMessages(library(tidyverse))
+suppressMessages(library(leaflet))
+
+COVID <- tibble(read.csv("~/Desktop/COVID-19_Cases_US.csv"))
+```
+
+## Prepare the Data
+
+- Filter out NA values for unassigned cases and non-US locations (mostly Puerto Rico)
+- Create a column with county names along with the number of cases for marker popups
+- Break number of cases into classes
+- Color markers by number of cases
+
+```{r}
+COVID <- COVID %>% filter(!is.na(Lat)) %>% filter(!is.na(Long_)) %>% 
+     filter(Country_Region == "US")
+COVID <- COVID %>% mutate(PopupInfo=paste(Admin2,Confirmed,sep=", "))
+COVID <- COVID %>% mutate(InfClass=cut(Confirmed,breaks=
+     c(0,1000,10000,50000,500000)))
+COVID <- COVID %>% mutate(MyColor=factor(InfClass,labels=
+     c("blue","green","yellow","red")))
+```
+
+## Create the Map
+
+- Create the map
+- Add markers with popup information, clustering, and color by number of cases
+- Add a legend
+
+```{r}
+MyMap <- COVID %>% leaflet() %>% addTiles() %>% 
+     addCircleMarkers(lat=~Lat,lng=~Long_,popup=~PopupInfo,
+     clusterOptions=markerClusterOptions(),color=~MyColor) %>%             
+     addLegend(labels=c("low","moderate","medium","high"),
+     colors=c("blue","green","yellow","red"))
+```
+
+## The Map
+
+```{r,fig.cap="Cumulative COVID Infections on 6 Feb 2021"}
+MyMap
+```
